@@ -1,7 +1,12 @@
 /// API Configuration for Gemini AI
 class ApiConfig {
-  // Gemini API Key
-  static const String geminiApiKey = 'AIzaSyCOu1I8zdigU3TBqFcaOjwY5dbVmX-RDn0';
+  // Gemini API Key - Load from environment variable or Flutter secrets
+  // For local development, add your key to a .env file (which is in .gitignore)
+  // Never commit API keys to version control!
+  static const String geminiApiKey = String.fromEnvironment(
+    'GEMINI_API_KEY',
+    defaultValue: 'YOUR_API_KEY_HERE_REPLACE_ME',
+  );
   
   // API Endpoints
   static const String geminiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta';
