@@ -11,11 +11,12 @@ class GeminiService {
   
   // Rate limiting: track last request time
   DateTime? _lastRequestTime;
-  static const int _minRequestDelayMs = 500; // Minimum delay between requests
+  // Increased to 2000ms (2 seconds) to prevent hitting rate limits on free tier
+  static const int _minRequestDelayMs = 2000;
   
   // Retry configuration
   static const int _maxRetries = 3;
-  static const int _baseDelayMs = 1000;
+  static const int _baseDelayMs = 3000; // Increased from 1000 to 3000
   
   // Check if API is configured
   bool get isApiConfigured => ApiConfig.isApiKeyConfigured;
