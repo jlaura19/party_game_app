@@ -32,7 +32,7 @@ class ApiConfig {
   
   // API Endpoints
   static const String geminiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta';
-  static const String geminiModel = 'gemini-1.5-pro';
+  static const String geminiModel = 'gemini-pro';  // Use gemini-pro instead of gemini-1.5-pro for free tier
   
   // System Instructions
   static const String systemInstruction = 
