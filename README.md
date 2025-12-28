@@ -48,29 +48,42 @@ Beautiful 3D animated dice for board games and decision-making.
 - Flutter SDK (3.9.2 or higher)
 - Dart SDK (3.9.2 or higher)
 - Windows/Android/iOS development setup
+- Google Gemini API Key (for AI features)
+
+### Get Your API Key
+
+1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Click "Create API Key"
+3. Copy your API key
+4. Create a `.env` file in the project root (never commit this file!)
+5. Add your key: `GEMINI_API_KEY=your_api_key_here`
 
 ### Installation
 
 1. **Clone or navigate to the project**:
    ```bash
-   cd C:\Users\JULIENT\.gemini\antigravity\scratch\party_game_app
+   cd C:\Users\JULIENT\OneDrive\Desktop\PROJECTS\party_game_app
    ```
 
-2. **Install dependencies**:
+2. **Create .env file with your API key**:
+   ```bash
+   # Copy the example
+   copy .env.example .env
+   # Edit .env with your actual API key
+   ```
+
+3. **Install dependencies**:
    ```bash
    flutter pub get
    ```
 
-3. **Run the app**:
+4. **Run the app**:
    ```bash
-   # Windows
-   flutter run -d windows
+   # For Android with .env file:
+   flutter run
    
-   # Android
-   flutter run -d <device-id>
-   
-   # iOS (macOS only)
-   flutter run -d <device-id>
+   # For production (pass API key directly):
+   flutter run --dart-define=GEMINI_API_KEY=your_api_key
    ```
 
 ## 📦 Build for Production

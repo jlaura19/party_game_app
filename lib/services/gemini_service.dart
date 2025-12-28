@@ -17,12 +17,18 @@ class GeminiService {
   static const int _maxRetries = 3;
   static const int _baseDelayMs = 1000;
   
+  // Check if API is configured
+  bool get isApiConfigured => ApiConfig.isApiKeyConfigured;
+  
   GeminiService() {
-    _model = GenerativeModel(
-      model: ApiConfig.geminiModel,
-      apiKey: ApiConfig.geminiApiKey,
-      systemInstruction: Content.system(ApiConfig.systemInstruction),
-    );
+    // Only initialize model if API key is configured
+    if (ApiConfig.isApiKeyConfigured) {
+      _model = GenerativeModel(
+        model: ApiConfig.geminiModel,
+        apiKey: ApiConfig.geminiApiKey,
+        systemInstruction: Content.system(ApiConfig.systemInstruction),
+      );
+    }
   }
 
   /// Generate a Never Have I Ever statement
@@ -147,6 +153,11 @@ class GeminiService {
 
   /// Private method to generate content with retry logic and caching
   Future<String> _generateContent(String prompt) async {
+    // Check if API is configured
+    if (!isApiConfigured) {
+      return ApiConfig.apiKeyErrorMessage;
+    }
+
     // Check cache first
     if (_cache.containsKey(prompt)) {
       return _cache[prompt]!;
@@ -197,7 +208,7 @@ class GeminiService {
     // Handle final error
     print('Gemini API Final Error: $lastError');
     if (lastError.toString().contains('401') || lastError.toString().contains('Unauthorized')) {
-      return "API key invalid. Please check your API key.";
+      return "API key invalid or expired. Please check your configuration.";
     } else if (lastError.toString().contains('429') || lastError.toString().contains('rate')) {
       return "Rate limit exceeded. Try again later.";
     }

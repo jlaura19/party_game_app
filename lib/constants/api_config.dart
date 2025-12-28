@@ -1,12 +1,30 @@
 /// API Configuration for Gemini AI
 class ApiConfig {
-  // Gemini API Key - Load from environment variable or Flutter secrets
-  // For local development, add your key to a .env file (which is in .gitignore)
-  // Never commit API keys to version control!
+  // Gemini API Key - Load from environment variable
+  // For development: Add your key to .env file (never commit to version control)
+  // For production: Pass via flutter build --dart-define=GEMINI_API_KEY=your_key
   static const String geminiApiKey = String.fromEnvironment(
     'GEMINI_API_KEY',
-    defaultValue: 'YOUR_API_KEY_HERE_REPLACE_ME',
+    defaultValue: '',
   );
+  
+  /// Check if API key is properly configured
+  static bool get isApiKeyConfigured {
+    return geminiApiKey.isNotEmpty && 
+           !geminiApiKey.contains('YOUR_API_KEY') &&
+           geminiApiKey.startsWith('AIza');
+  }
+  
+  /// Get error message if API key is not configured
+  static String get apiKeyErrorMessage {
+    if (geminiApiKey.isEmpty) {
+      return 'API key not configured. Add GEMINI_API_KEY to .env file.';
+    }
+    if (geminiApiKey.contains('YOUR_API_KEY')) {
+      return 'API key is a placeholder. Replace with actual key from aistudio.google.com/app/apikey';
+    }
+    return 'API key configuration error.';
+  }
   
   // API Endpoints
   static const String geminiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta';
