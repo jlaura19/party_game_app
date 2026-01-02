@@ -1,218 +1,46 @@
-import 'package:google_generative_ai/google_generative_ai.dart';
-import '../constants/api_config.dart';
 import '../models/difficulty_level.dart';
+import 'api_service.dart';
 
-/// Service for interacting with Google's Gemini AI
+/// Service for generating AI content via FastAPI backend
+/// This replaces direct Gemini API calls for better security and control
 class GeminiService {
-  late final GenerativeModel _model;
+  final ApiService _apiService = ApiService();
   
-  // Cache to store generated content and avoid duplicate requests
-  final Map<String, String> _cache = {};
+  // Check if backend is available
+  Future<bool> get isApiConfigured async => await _apiService.checkHealth();
   
-  // Rate limiting: track last request time
-  DateTime? _lastRequestTime;
-  // Increased to 2000ms (2 seconds) to prevent hitting rate limits on free tier
-  static const int _minRequestDelayMs = 2000;
-  
-  // Retry configuration
-  static const int _maxRetries = 3;
-  static const int _baseDelayMs = 3000; // Increased from 1000 to 3000
-  
-  // Check if API is configured
-  bool get isApiConfigured => ApiConfig.isApiKeyConfigured;
-  
-  GeminiService() {
-    // Only initialize model if API key is configured
-    if (ApiConfig.isApiKeyConfigured) {
-      _model = GenerativeModel(
-        model: ApiConfig.geminiModel,
-        apiKey: ApiConfig.geminiApiKey,
-        systemInstruction: Content.system(ApiConfig.systemInstruction),
-      );
-    }
-  }
-
   /// Generate a Never Have I Ever statement
   Future<String> generateNeverHaveIEver([DifficultyLevel difficulty = DifficultyLevel.moderate]) async {
-    final intensityGuide = _getDifficultyGuide(difficulty);
-    final prompt = 
-        "Generate a single, unique, creative, and funny 'Never Have I Ever' "
-        "statement for a group of 20-year-olds. $intensityGuide "
-        "Keep it short (under 20 words). Do not include quotes or numbering.";
-    
-    return await _generateContent(prompt);
+    return await _apiService.generateNeverHaveIEver(difficulty);
   }
 
   /// Generate a Most Likely To scenario
   Future<String> generateMostLikelyTo([DifficultyLevel difficulty = DifficultyLevel.moderate]) async {
-    final intensityGuide = _getDifficultyGuide(difficulty);
-    final prompt = 
-        "Generate a single, unique, creative, and funny 'Most Likely To' "
-        "statement for a group of 20-year-olds. $intensityGuide "
-        "Keep it short (under 20 words). Do not include quotes or numbering.";
-    
-    return await _generateContent(prompt);
+    return await _apiService.generateMostLikelyTo(difficulty);
   }
 
   /// Generate a Truth question
   Future<String> generateTruth([DifficultyLevel difficulty = DifficultyLevel.moderate]) async {
-    final intensityGuide = _getDifficultyGuide(difficulty);
-    final prompt = 
-        "Generate a Truth question for a party game for young adults. "
-        "$intensityGuide Keep it short.";
-    
-    return await _generateContent(prompt);
+    return await _apiService.generateTruth(difficulty);
   }
 
   /// Generate a Dare challenge
   Future<String> generateDare([DifficultyLevel difficulty = DifficultyLevel.moderate]) async {
-    final intensityGuide = _getDifficultyGuide(difficulty);
-    final prompt = 
-        "Generate a Dare challenge for a party game for young adults. "
-        "$intensityGuide Physical or social. Keep it short.";
-    
-    return await _generateContent(prompt);
+    return await _apiService.generateDare(difficulty);
   }
 
   /// Generate a roast for someone
   Future<String> generateRoast(String name, String trait, [DifficultyLevel difficulty = DifficultyLevel.moderate]) async {
-    final intensityGuide = _getRoastIntensity(difficulty);
-    final prompt = 
-        "Write a $intensityGuide roast for a friend "
-        "named $name who is known for: ${trait.isEmpty ? 'being basic' : trait}. "
-        "Keep it under 2 sentences. Direct address (use 'You').";
-    
-    return await _generateContent(prompt);
+    return await _apiService.generateRoast(name, trait, difficulty);
   }
 
   /// Generate a debate topic
   Future<String> generateDebateTopic([DifficultyLevel difficulty = DifficultyLevel.moderate]) async {
-    final intensityGuide = _getDebateIntensity(difficulty);
-    final prompt = 
-        "Generate a $intensityGuide debate topic for two friends. "
-        "Examples: 'Is a hotdog a sandwich?' or 'Would you rather have fingers "
-        "for toes or toes for fingers?'. Keep it short.";
-    
-    return await _generateContent(prompt);
+    return await _apiService.generateDebateTopic(difficulty);
   }
 
   /// Generate a cocktail recipe
   Future<String> generateCocktail(String ingredients) async {
-    final prompt = 
-        "Invent a creative, funny, or weird cocktail recipe based on these "
-        "ingredients/vibe: \"$ingredients\". Give it a cool name. "
-        "Keep instructions short.";
-    
-    return await _generateContent(prompt);
-  }
-
-  /// Get difficulty-appropriate content guidance
-  String _getDifficultyGuide(DifficultyLevel difficulty) {
-    switch (difficulty) {
-      case DifficultyLevel.mild:
-        return 'Keep it family-friendly and safe for all audiences.';
-      case DifficultyLevel.moderate:
-        return 'Make it fun and slightly cheeky, appropriate for a standard party.';
-      case DifficultyLevel.spicy:
-        return 'Make it bold, daring, and adult-oriented. Push boundaries.';
-    }
-  }
-
-  /// Get roast intensity based on difficulty
-  String _getRoastIntensity(DifficultyLevel difficulty) {
-    switch (difficulty) {
-      case DifficultyLevel.mild:
-        return 'playful and lighthearted';
-      case DifficultyLevel.moderate:
-        return 'witty and slightly savage';
-      case DifficultyLevel.spicy:
-        return 'brutal, savage, and hilariously mean';
-    }
-  }
-
-  /// Get debate topic intensity
-  String _getDebateIntensity(DifficultyLevel difficulty) {
-    switch (difficulty) {
-      case DifficultyLevel.mild:
-        return 'silly and wholesome';
-      case DifficultyLevel.moderate:
-        return 'silly, absurd, or funny';
-      case DifficultyLevel.spicy:
-        return 'controversial, provocative, or hilariously inappropriate';
-    }
-  }
-
-  /// Enforce rate limiting - wait if necessary
-  Future<void> _enforceRateLimit() async {
-    if (_lastRequestTime != null) {
-      final elapsed = DateTime.now().difference(_lastRequestTime!).inMilliseconds;
-      if (elapsed < _minRequestDelayMs) {
-        await Future.delayed(Duration(milliseconds: _minRequestDelayMs - elapsed));
-      }
-    }
-  }
-
-  /// Private method to generate content with retry logic and caching
-  Future<String> _generateContent(String prompt) async {
-    // Check if API is configured
-    if (!isApiConfigured) {
-      return ApiConfig.apiKeyErrorMessage;
-    }
-
-    // Check cache first
-    if (_cache.containsKey(prompt)) {
-      return _cache[prompt]!;
-    }
-
-    // Enforce rate limiting
-    await _enforceRateLimit();
-    _lastRequestTime = DateTime.now();
-
-    int retryCount = 0;
-    dynamic lastError;
-
-    while (retryCount < _maxRetries) {
-      try {
-        final content = [Content.text(prompt)];
-        final response = await _model.generateContent(content);
-        
-        if (response.text == null || response.text!.isEmpty) {
-          return "Couldn't think of one! Try again.";
-        }
-        
-        final result = response.text!.trim();
-        
-        // Cache the result
-        _cache[prompt] = result;
-        
-        return result;
-      } catch (e) {
-        lastError = e;
-        print('Gemini API Error (attempt ${retryCount + 1}/$_maxRetries): $e');
-        
-        // Check if it's a rate limit error
-        if (e.toString().contains('429') || e.toString().contains('rate')) {
-          retryCount++;
-          if (retryCount < _maxRetries) {
-            // Exponential backoff
-            final delayMs = _baseDelayMs * (1 << (retryCount - 1));
-            print('Rate limited. Retrying in ${delayMs}ms...');
-            await Future.delayed(Duration(milliseconds: delayMs));
-          }
-        } else {
-          // For non-rate-limit errors, don't retry
-          break;
-        }
-      }
-    }
-
-    // Handle final error
-    print('Gemini API Final Error: $lastError');
-    if (lastError.toString().contains('401') || lastError.toString().contains('Unauthorized')) {
-      return "API key invalid or expired. Please check your configuration.";
-    } else if (lastError.toString().contains('429') || lastError.toString().contains('rate')) {
-      return "Rate limit exceeded. Try again later.";
-    }
-    return "Couldn't generate content. Please try again.";
+    return await _apiService.generateCocktail(ingredients);
   }
 }

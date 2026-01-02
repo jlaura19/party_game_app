@@ -8,9 +8,10 @@ import '../providers/app_providers.dart';
 import '../widgets/animated_game_card.dart';
 import '../widgets/gradient_button.dart';
 import '../widgets/difficulty_selector.dart';
+import '../widgets/particle_effect.dart';
 
 /// Generic card game screen for Never Have I Ever and Most Likely To
-class CardGameScreen extends ConsumerWidget {
+class CardGameScreen extends ConsumerStatefulWidget {
   final GameMode mode;
 
   const CardGameScreen({
@@ -19,9 +20,16 @@ class CardGameScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CardGameScreen> createState() => _CardGameScreenState();
+}
+
+class _CardGameScreenState extends ConsumerState<CardGameScreen> {
+  bool _showParticles = false;
+
+  @override
+  Widget build(BuildContext context) {
     // Select the appropriate provider based on game mode
-    final provider = mode == GameMode.neverHaveIEver
+    final provider = widget.mode == GameMode.neverHaveIEver
         ? neverHaveIEverProvider
         : mostLikelyToProvider;
     
@@ -35,7 +43,7 @@ class CardGameScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF111827),
       appBar: AppBar(
-        backgroundColor: mode.primaryColor,
+        backgroundColor: widget.mode.primaryColor,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -43,10 +51,10 @@ class CardGameScreen extends ConsumerWidget {
         ),
         title: Row(
           children: [
-            Icon(mode.icon, color: Colors.white, size: 24),
+            Icon(widget.mode.icon, color: Colors.white, size: 24),
             const SizedBox(width: 12),
             Text(
-              mode.title,
+              widget.mode.title,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 20,
@@ -56,97 +64,115 @@ class CardGameScreen extends ConsumerWidget {
           ],
         ),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          // Colored header extension
-          Container(
-            height: 8,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: mode.gradientColors,
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+          Column(
+            children: [
+              // Colored header extension
+              Container(
+                height: 8,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: widget.mode.gradientColors,
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                ),
               ),
-            ),
-          ),
-          
-          // Main content
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  // Difficulty Selector
-                  DifficultySelector(
-                    selectedDifficulty: difficulty,
-                    onDifficultyChanged: (newDifficulty) {
-                      difficultyNotifier.setDifficulty(newDifficulty);
-                      // Refresh card with new difficulty
-                      notifier.nextCard();
-                    },
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  const Spacer(),
-                  
-                  // Game card
-                  AnimatedGameCard(
-                    key: ValueKey(state.currentCard.text),
-                    text: state.currentCard.text,
-                    color: mode.primaryColor,
-                    icon: mode.icon,
-                    isLoading: state.isLoading,
-                    loadingText: 'Consulting the party gods...',
-                  ),
-                  
-                  const Spacer(),
-                  
-                  // Buttons
-                  Column(
+              
+              // Main content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
                     children: [
-                      // Next Card button
-                      GradientButton(
-                        text: 'Next Card',
-                        onPressed: state.isLoading
-                            ? null
-                            : () {
-                                _vibrate(vibrationEnabled);
-                                notifier.nextCard();
-                              },
-                        gradientColors: mode.gradientColors,
-                        width: double.infinity,
-                        height: 64,
+                      // Difficulty Selector
+                      DifficultySelector(
+                        selectedDifficulty: difficulty,
+                        onDifficultyChanged: (newDifficulty) {
+                          difficultyNotifier.setDifficulty(newDifficulty);
+                          // Refresh card with new difficulty
+                          notifier.nextCard();
+                        },
                       ),
                       
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       
-                      // AI Remix button
-                      GradientButton(
-                        text: 'AI Remix',
-                        onPressed: state.isLoading
-                            ? null
-                            : () {
-                                _vibrate(vibrationEnabled);
-                                _generateAI(notifier, gemini, difficulty);
-                              },
-                        gradientColors: const [
-                          Color(0xFFEAB308),
-                          Color(0xFFCA8A04),
-                        ],
-                        icon: Icons.auto_awesome,
-                        width: double.infinity,
-                        height: 56,
-                        isOutlined: true,
+                      const Spacer(),
+                      
+                      // Game card
+                      AnimatedGameCard(
+                        key: ValueKey(state.currentCard.text),
+                        text: state.currentCard.text,
+                        color: widget.mode.primaryColor,
+                        icon: widget.mode.icon,
                         isLoading: state.isLoading,
+                        loadingText: 'Consulting the party gods...',
                       ),
+                      
+                      const Spacer(),
+                      
+                      // Buttons
+                      Column(
+                        children: [
+                          // Next Card button
+                          GradientButton(
+                            text: 'Next Card',
+                            onPressed: state.isLoading
+                                ? null
+                                : () {
+                                    _vibrate(vibrationEnabled);
+                                    notifier.nextCard();
+                                  },
+                            gradientColors: widget.mode.gradientColors,
+                            width: double.infinity,
+                            height: 64,
+                          ),
+                          
+                          const SizedBox(height: 12),
+                          
+                          // AI Remix button
+                          GradientButton(
+                            text: 'AI Remix ✨',
+                            onPressed: state.isLoading
+                                ? null
+                                : () async {
+                                    _vibrate(vibrationEnabled);
+                                    await _generateAI(notifier, gemini, difficulty);
+                                    // Trigger particle effect
+                                    setState(() => _showParticles = true);
+                                    Future.delayed(const Duration(milliseconds: 100), () {
+                                      if (mounted) {
+                                        setState(() => _showParticles = false);
+                                      }
+                                    });
+                                  },
+                            gradientColors: const [
+                              Color(0xFFEAB308),
+                              Color(0xFFCA8A04),
+                            ],
+                            icon: Icons.auto_awesome,
+                            width: double.infinity,
+                            height: 56,
+                            isOutlined: true,
+                            isLoading: state.isLoading,
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 24),
                     ],
                   ),
-                  
-                  const SizedBox(height: 24),
-                ],
+                ),
               ),
-            ),
+            ],
+          ),
+          
+          // Particle effect overlay
+          ParticleEffect(
+            isActive: _showParticles,
+            particleCount: 40,
+            type: ParticleType.confetti,
           ),
         ],
       ),
@@ -154,7 +180,7 @@ class CardGameScreen extends ConsumerWidget {
   }
 
   Future<void> _generateAI(notifier, gemini, difficulty) async {
-    if (mode == GameMode.neverHaveIEver) {
+    if (widget.mode == GameMode.neverHaveIEver) {
       await notifier.generateAICard(() => gemini.generateNeverHaveIEver(difficulty));
     } else {
       await notifier.generateAICard(() => gemini.generateMostLikelyTo(difficulty));

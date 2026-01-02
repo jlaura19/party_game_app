@@ -122,51 +122,73 @@ flutter build ios --release
 ## 📁 Project Structure
 
 ```
-lib/
-├── main.dart                    # App entry point
-├── constants/                   # App constants
-│   ├── api_config.dart         # Gemini API configuration
-│   ├── app_colors.dart         # Color palette
-│   └── game_data.dart          # Preset game content
-├── models/                      # Data models
-│   ├── game_mode.dart
-│   └── game_card.dart
-├── services/                    # Business logic
-│   ├── gemini_service.dart     # AI integration
-│   └── storage_service.dart    # Local persistence
-├── providers/                   # State management
-│   ├── app_providers.dart
-│   └── game_providers.dart
-├── widgets/                     # Reusable widgets
-│   ├── gradient_button.dart
-│   ├── animated_game_card.dart
-│   └── animated_dice.dart
-└── screens/                     # App screens
-    ├── main_menu_screen.dart
-    ├── card_game_screen.dart
-    ├── truth_dare_screen.dart
-    ├── roast_master_screen.dart
-    ├── debate_duel_screen.dart
-    ├── bartender_screen.dart
-    └── dice_roller_screen.dart
+party_game_app/
+├── backend/                     # FastAPI backend server
+│   ├── main.py                 # API endpoints
+│   ├── requirements.txt        # Python dependencies
+│   ├── .env                    # Environment config (gitignored)
+│   └── README.md               # Backend documentation
+├── lib/
+│   ├── main.dart               # App entry point
+│   ├── constants/              # App constants
+│   │   ├── api_config.dart    # API configuration
+│   │   ├── app_colors.dart    # Color palette
+│   │   └── game_data.dart     # Preset game content
+│   ├── models/                 # Data models
+│   │   ├── game_mode.dart
+│   │   └── game_card.dart
+│   ├── services/               # Business logic
+│   │   ├── api_service.dart   # HTTP client for backend
+│   │   ├── gemini_service.dart # AI integration wrapper
+│   │   └── storage_service.dart # Local persistence
+│   ├── providers/              # State management
+│   │   ├── app_providers.dart
+│   │   └── game_providers.dart
+│   ├── widgets/                # Reusable widgets
+│   │   ├── gradient_button.dart
+│   │   ├── animated_game_card.dart
+│   │   └── animated_dice.dart
+│   └── screens/                # App screens
+│       ├── main_menu_screen.dart
+│       ├── card_game_screen.dart
+│       ├── truth_dare_screen.dart
+│       ├── roast_master_screen.dart
+│       ├── debate_duel_screen.dart
+│       ├── bartender_screen.dart
+│       └── dice_roller_screen.dart
 ```
 
-### API Configuration
+### Backend Architecture (NEW!)
 
-The Gemini API key is configured in `lib/constants/api_config.dart`:
+The app now uses a **FastAPI backend** to securely proxy Gemini API requests:
 
-```dart
-static const String geminiApiKey = 'YOUR_API_KEY_HERE';
-static const String geminiModel = 'gemini-1.5-pro';
+```
+Flutter App → FastAPI Backend → Gemini API
 ```
 
-**Important Features**:
-- 🔄 **Rate Limiting**: Automatic request throttling (500ms minimum delay between requests)
-- ♻️ **Caching**: Generated content is cached to avoid duplicate API calls
-- 🔁 **Exponential Backoff**: Automatic retry logic for rate-limited requests (up to 3 attempts)
-- ⚠️ **Error Handling**: Detailed error messages for debugging API issues
+**Benefits**:
+- 🔒 API key stays secure on the server
+- 🚀 Better rate limiting and caching
+- 🔄 Easy to switch AI providers
+- 📊 Centralized monitoring and logging
 
-> **Note**: For production, consider using environment variables or a backend service to secure your API key.
+**Setup**:
+
+1. **Start the backend** (see [backend/README.md](backend/README.md)):
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   # Add your GEMINI_API_KEY to .env
+   python main.py
+   ```
+
+2. **Configure Flutter app**:
+   - For local development, the app uses `http://localhost:8000` by default
+   - For production, update the URL in `lib/services/api_service.dart`
+
+**Deployment**: The backend can be deployed to Render, Railway, Google Cloud Run, or any Python hosting service. See [backend/README.md](backend/README.md) for detailed instructions.
+
+> **Note**: The old direct API integration is replaced with this more secure backend approach.
 
 ###🎨 Customization
 
@@ -188,14 +210,16 @@ Contributions are welcome! Feel free to:
 - Fix bugs
 - Improve documentation
 
-## � Recent Updates (v1.1.0)
+## 📋 Recent Updates (v2.0.0)
 
+- ✅ **NEW: FastAPI Backend** - Secure proxy for Gemini API calls
+- ✅ Added backend with rate limiting, caching, and retry logic
+- ✅ Created HTTP service for backend communication
+- ✅ Updated GeminiService to use backend instead of direct API
+- ✅ Improved security by keeping API key server-side
+- ✅ Added comprehensive backend documentation
 - ✅ Fixed StorageService initialization with async/await pattern
 - ✅ Fixed text overflow on game mode cards
-- ✅ Added request caching to reduce API calls
-- ✅ Implemented exponential backoff retry logic for rate limits
-- ✅ Improved error messages for better debugging
-- ✅ Added minimum request delay to prevent API throttling
 
 ## �📝 License
 
